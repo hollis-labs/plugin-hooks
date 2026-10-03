@@ -48,7 +48,7 @@ func (h *Harness) Load(ctx context.Context, config hooks.ScopeConfig, register f
 		h.mu.Unlock()
 		return nil, hooks.ErrDisposed
 	}
-	scope, err := h.Dispatcher.NewScope(config)
+	scope, err := h.NewScope(config)
 	if err == nil {
 		h.scopes = append(h.scopes, scope)
 	}
