@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -13,17 +12,7 @@ import (
 )
 
 // No waivers: the reference dispatcher must meet every published requirement.
-func TestConformance(t *testing.T) {
-	factory := hookstest.Factory(hookstest.NewEngineAdapter)
-	if fault := os.Getenv("HOOKSTEST_TEST_FAULT"); fault != "" {
-		factory = faultFactory(fault)
-	}
-	if os.Getenv("HOOKSTEST_TEST_FAULT") == "waive" {
-		hookstest.Run(t, factory, hookstest.Waive("R01", "host migration gap for waiver reporting test"))
-		return
-	}
-	hookstest.Run(t, factory)
-}
+func TestConformance(t *testing.T) { hookstest.Run(t, hookstest.NewEngineAdapter) }
 
 func TestPluginHarness(t *testing.T) {
 	remote := false

@@ -23,10 +23,10 @@ func TestRejectsBrokenAdapters(t *testing.T) {
 	for _, probe := range []struct{ fault, id string }{{"priority", "R01"}, {"fail-open", "R04"}, {"once", "R08"}, {"stale-handle", "R09"}, {"payload", "R13"}, {"view", "R14"}, {"catalog", "R15"}} {
 		t.Run(probe.fault, func(t *testing.T) {
 			// #nosec G204 -- The executable is this test binary; arguments are fixed suite requirement IDs.
-			cmd := exec.Command(executable, "-test.run=^TestConformance/"+probe.id, "-test.timeout=10s")
+			cmd := exec.Command(executable, "-test.run=^TestFaultProbe/"+probe.id, "-test.timeout=10s")
 			cmd.Env = append(os.Environ(), "HOOKSTEST_TEST_FAULT="+probe.fault)
 			output, err := cmd.CombinedOutput()
-			if err == nil || !strings.Contains(string(output), "FAIL: TestConformance/"+probe.id) {
+			if err == nil || !strings.Contains(string(output), "FAIL: TestFaultProbe/"+probe.id) {
 				t.Fatalf("broken adapter %s was not rejected: %v\n%s", probe.fault, err, output)
 			}
 		})
@@ -99,10 +99,25 @@ func TestWaiverReasonReported(t *testing.T) {
 		t.Fatal(err)
 	}
 	// #nosec G204 -- Re-execute this test binary with fixed arguments to observe testing.T's skip output.
-	cmd := exec.Command(executable, "-test.run=^TestConformance/R01", "-test.v", "-test.timeout=10s")
+	cmd := exec.Command(executable, "-test.run=^TestFaultProbe/R01", "-test.v", "-test.timeout=10s")
 	cmd.Env = append(os.Environ(), "HOOKSTEST_TEST_FAULT=waive")
 	output, err := cmd.CombinedOutput()
-	if err != nil || !strings.Contains(string(output), "WAIVED R01") || !strings.Contains(string(output), "host migration gap for waiver reporting test") || !strings.Contains(string(output), "SKIP: TestConformance/R01") {
+	if err != nil || !strings.Contains(string(output), "WAIVED R01") || !strings.Contains(string(output), "host migration gap for waiver reporting test") || !strings.Contains(string(output), "SKIP: TestFaultProbe/R01") {
 		t.Fatalf("waiver was not visibly reported: %v\n%s", err, output)
 	}
+}
+
+// TestFaultProbe is a child-process entry point. The reference TestConformance
+// always runs NewEngineAdapter unconditionally, with zero waivers.
+func TestFaultProbe(t *testing.T) {
+	fault := os.Getenv("HOOKSTEST_TEST_FAULT")
+	if fault == "" {
+		return
+	}
+	factory := faultFactory(fault)
+	if fault == "waive" {
+		hookstest.Run(t, factory, hookstest.Waive("R01", "host migration gap for waiver reporting test"))
+		return
+	}
+	hookstest.Run(t, factory)
 }
